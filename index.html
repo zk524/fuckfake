@@ -1,0 +1,45 @@
+<input id="ws" value="wss://" />
+<input id="fps" value="10" />
+<button id="start">Start</button>
+<button id="stop" disabled>Stop</button><br>
+<video id="video" autoplay></video><br>
+<img id="processedVideo">
+<canvas id="canvas" style="display: none"></canvas>
+<script>
+    const DID = _ => document.getElementById(_)
+    const video = DID('video')
+    const canvas = DID('canvas')
+    const processedVideo = DID('processedVideo')
+    let stream, socket, intervalTimer
+
+    const onClose = () => {
+        intervalTimer && clearInterval(intervalTimer)
+        stream && stream.getTracks().forEach(t => t.stop())
+        socket && socket.close()
+        processedVideo.src = stream = intervalTimer = ""
+        DID("stop").disabled = !(DID("start").disabled = false)
+    }
+
+    const onReady = (w, h) => {
+        video.width = canvas.width = processedVideo.width = w
+        video.height = canvas.height = processedVideo.height = h
+    }
+
+    video.addEventListener("loadedmetadata", () => {
+        onReady(video.videoWidth, video.videoHeight)
+        socket = new WebSocket(document.getElementById("ws").value)
+        socket.onclose = onClose
+        socket.onerror = (e) => console.log('WebSocket error:', e)
+        socket.onmessage = (e) => processedVideo.src = e.data
+        socket.onopen = () => console.log("WebSocket open:", intervalTimer = setInterval(() => {
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height)
+            socket?.readyState === WebSocket.OPEN && socket.send(canvas.toDataURL('image/jpeg'))
+        }, 1000 / Number(document.getElementById("fps").value || 10)))
+    })
+
+    document.getElementById('stop').onclick = onClose
+    document.getElementById('start').onclick = () => navigator.mediaDevices.getUserMedia({ video: true })
+        .then(s => video.srcObject = stream = s)
+        .then(_ => DID("stop").disabled = !(DID("start").disabled = true))
+        .catch(console.log)
+</script>
