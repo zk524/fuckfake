@@ -1,7 +1,9 @@
 <input id="ws" value="wss://" />
 <input id="fps" value="10" />
+<input id="src" type="file" style="display: none" />
 <button id="start">Start</button>
-<button id="stop" disabled>Stop</button><br>
+<button id="stop" disabled>Stop</button>
+<button id="upload">SourceImage</button><br>
 <video id="video" autoplay></video><br>
 <img id="processedVideo">
 <canvas id="canvas" style="display: none"></canvas>
@@ -27,19 +29,30 @@
 
     video.addEventListener("loadedmetadata", () => {
         onReady(video.videoWidth, video.videoHeight)
-        socket = new WebSocket(document.getElementById("ws").value)
+        socket = new WebSocket(DID("ws").value)
         socket.onclose = onClose
         socket.onerror = (e) => console.log('WebSocket error:', e)
         socket.onmessage = (e) => processedVideo.src = e.data
         socket.onopen = () => console.log("WebSocket open:", intervalTimer = setInterval(() => {
             canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height)
             socket?.readyState === WebSocket.OPEN && socket.send(canvas.toDataURL('image/jpeg'))
-        }, 1000 / Number(document.getElementById("fps").value || 10)))
+        }, 1000 / Number(DID("fps").value || 10)))
     })
 
-    document.getElementById('stop').onclick = onClose
-    document.getElementById('start').onclick = () => navigator.mediaDevices.getUserMedia({ video: true })
+    DID('stop').onclick = onClose
+    DID('start').onclick = () => navigator.mediaDevices.getUserMedia({ video: true })
         .then(s => video.srcObject = stream = s)
         .then(_ => DID("stop").disabled = !(DID("start").disabled = true))
         .catch(console.log)
+    DID("upload").onclick = () => DID("src").click()
+    DID("src").addEventListener("change", ({ target: { files: [file] } }) => {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+            const s = new WebSocket(DID("ws").value + "/src")
+            s.onopen = () => s?.readyState === WebSocket.OPEN && s.send(e.target.result)
+            s.onmessage = (e) => (alert(e.data), s.close())
+        }
+        reader.readAsDataURL(file)
+        DID("src").value = ""
+    })
 </script>
