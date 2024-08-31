@@ -1,4 +1,4 @@
-<input id="ws" value="wss://" />
+<input id="wss" value="wss://" />
 <input id="fps" value="10" />
 <input id="src" type="file" style="display: none" />
 <button id="start">Start</button>
@@ -29,7 +29,7 @@
 
     video.addEventListener("loadedmetadata", () => {
         onReady(video.videoWidth, video.videoHeight)
-        socket = new WebSocket(DID("ws").value)
+        socket = new WebSocket(DID("wss").value)
         socket.onclose = onClose
         socket.onerror = (e) => console.log('WebSocket error:', e)
         socket.onmessage = (e) => processedVideo.src = e.data
@@ -48,7 +48,7 @@
     DID("src").addEventListener("change", ({ target: { files: [file] } }) => {
         const reader = new FileReader()
         reader.onload = (e) => {
-            const s = new WebSocket(DID("ws").value + "/src")
+            const s = new WebSocket(DID("wss").value + "/src")
             s.onopen = () => s?.readyState === WebSocket.OPEN && s.send(e.target.result)
             s.onmessage = (e) => (alert(e.data), s.close())
         }
