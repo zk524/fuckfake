@@ -1,8 +1,7 @@
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<input id="wss" value="wss://" />
+<input id="ws" value="wss://" />
 <input id="fps" value="10" />
 <input id="src" type="file" style="display: none" />
-<button id="start">Start</button>
+<button id="open">Open</button>
 <button id="stop" disabled>Stop</button>
 <button id="upload">SourceImage</button><br>
 <video id="video" autoplay></video><br>
@@ -20,7 +19,7 @@
         stream && stream.getTracks().forEach(t => t.stop())
         socket && socket.close()
         processedVideo.src = stream = intervalTimer = ""
-        DID("stop").disabled = !(DID("start").disabled = false)
+        DID("stop").disabled = !(DID("open").disabled = false)
     }
 
     const onReady = (w, h) => {
@@ -30,30 +29,30 @@
 
     video.addEventListener("loadedmetadata", () => {
         onReady(video.videoWidth, video.videoHeight)
-        socket = new WebSocket(DID("wss").value)
+        socket = new WebSocket(DID("ws").value)
         socket.onclose = onClose
         socket.onerror = (e) => console.log('WebSocket error:', e)
-        socket.onmessage = (e) => processedVideo.src = e.data
+        socket.onmessage = (e) => processedVideo.src = URL.createObjectURL(e.data)
         socket.onopen = () => console.log("WebSocket open:", intervalTimer = setInterval(() => {
             canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height)
-            socket?.readyState === WebSocket.OPEN && socket.send(canvas.toDataURL('image/jpeg'))
+            canvas.toBlob(_ => (r => (r.onloadend = () => socket?.readyState === WebSocket.OPEN && socket.send(r.result), r.readAsArrayBuffer(_)))(new FileReader()))
         }, 1000 / Number(DID("fps").value || 10)))
     })
 
     DID('stop').onclick = onClose
-    DID('start').onclick = () => navigator.mediaDevices.getUserMedia({ video: true })
+    DID('open').onclick = () => navigator.mediaDevices.getUserMedia({ video: true })
         .then(s => video.srcObject = stream = s)
-        .then(_ => DID("stop").disabled = !(DID("start").disabled = true))
+        .then(_ => DID("stop").disabled = !(DID("open").disabled = true))
         .catch(console.log)
     DID("upload").onclick = () => DID("src").click()
     DID("src").addEventListener("change", ({ target: { files: [file] } }) => {
         const reader = new FileReader()
         reader.onload = (e) => {
-            const s = new WebSocket(DID("wss").value + "/src")
+            const s = new WebSocket(DID("ws").value + "/src")
             s.onopen = () => s?.readyState === WebSocket.OPEN && s.send(e.target.result)
             s.onmessage = (e) => (alert(e.data), s.close())
         }
-        reader.readAsDataURL(file)
+        reader.readAsArrayBuffer(file)
         DID("src").value = ""
     })
 </script>
