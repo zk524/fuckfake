@@ -23,7 +23,7 @@
                 params.candidates.push(candidate)
                 timer = setTimeout(() => {
                     socket = new WebSocket((_ => (_.protocol = _.protocol === "https:" ? "wss" : "ws", _.pathname = "ws", _.href))(new URL(DID("server").value)))
-                    socket.onmessage = (e) => pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(e.data)))
+                    socket.onmessage = (e) => e.data.length > 10 ? pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(e.data))) : console.log(e.data)
                     socket.onopen = () => socket.send(JSON.stringify(params))
                 }, 1000)
             }
